@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Menu — Hambúrguer do Arraso</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-burger-wrap">
+    <img src="assets/loading-burger.png" alt="A carregar…">
+  </div>
+  <p>A carregar…</p>
+</div>
+
+<!-- Som de "dois blocos de madeira a chocar", usado pelos carrosséis (ver assets/carousel.js) -->
+<audio id="wood-sound" preload="auto">
+  <source src="assets/sounds/wood-click.mp3" type="audio/mpeg">
+</audio>
+
+<div id="topbar-mount"></div>
+
+<main class="wrap" style="padding:2.5rem 0 3rem;">
+
+  <div class="carousel-wrap reveal">
+    <p class="section-eyebrow">FAST FOOD</p>
+    <h2 class="section-title">Do nosso fogão para si</h2>
+    <button class="carousel-arrow left" onclick="scrollCarousel('fastfood-track',-260)" aria-label="Deslizar para a esquerda">‹</button>
+    <button class="carousel-arrow right" onclick="scrollCarousel('fastfood-track',260)" aria-label="Deslizar para a direita">›</button>
+    <div id="fastfood-track" class="carousel-track">
+      <div class="carousel-skeleton"></div><div class="carousel-skeleton"></div><div class="carousel-skeleton"></div>
+    </div>
+  </div>
+
+  <div class="carousel-wrap reveal">
+    <p class="section-eyebrow">BEBIDAS</p>
+    <h2 class="section-title">Para acompanhar</h2>
+    <button class="carousel-arrow left" onclick="scrollCarousel('bebidas-track',-180)" aria-label="Deslizar para a esquerda">‹</button>
+    <button class="carousel-arrow right" onclick="scrollCarousel('bebidas-track',180)" aria-label="Deslizar para a direita">›</button>
+    <div id="bebidas-track" class="carousel-track">
+      <div class="carousel-skeleton round"></div><div class="carousel-skeleton round"></div><div class="carousel-skeleton round"></div>
+    </div>
+  </div>
+  <p class="age-notice">🔞 Bebidas alcoólicas destinadas apenas a maiores de 18 anos.</p>
+
+</main>
+
+<div id="bottom-nav-mount"></div>
+
+<script src="assets/supabase-config.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/cart.js"></script>
+<script src="assets/layout.js"></script>
+<script src="assets/carousel.js"></script>
+<script>
+renderTopbar('loja');
+renderBottomNav('loja');
+bindCarouselSound();
+
+async function carregar(){
+  const { data, error } = await supabaseClient.from('products').select('*').eq('ativo', true).order('nome');
+  if(error || !data){ return; }
+
+  const fastfood = data.filter(p => p.categoria === 'fastfood');
+  const bebidas = data.filter(p => p.categoria === 'bebidas');
+
+  document.getElementById('fastfood-track').innerHTML = fastfood.map(p => `
+    <a href="produto.html?id=${p.id}" class="food-card burn-edge card-hover">
+      <div class="product-img" style="${p.imagem_url?`background-image:url(${p.imagem_url})`:''}">${p.imagem_url?'':`[ Foto — ${p.nome} ]`}</div>
+      <div class="info">
+        <h4>${p.nome}</h4>
+        <p class="desc">${p.descricao || ''}</p>
+        <div class="row">
+          <span class="price">${formatKz(p.preco_promocional || p.preco)}</span>
+          <button class="btn-orange" style="padding:.5rem 1rem;font-size:.8rem;" onclick="event.preventDefault(); window.location.href='produto.html?id=${p.id}'">Adicionar</button>
+        </div>
+      </div>
+    </a>
+  `).join('') || `<p class="empty-state">Sem produtos nesta categoria.</p>`;
+
+  document.getElementById('bebidas-track').innerHTML = bebidas.map(p => `
+    <a href="produto.html?id=${p.id}" class="drink-card">
+      <div class="drink-img" style="${p.imagem_url?`background-image:url(${p.imagem_url})`:''}">${p.imagem_url?'':p.nome}</div>
+      <h4>${p.nome}</h4>
+      <p class="price">${formatKz(p.preco_promocional || p.preco)}</p>
+      <button class="btn-orange" style="padding:.4rem .9rem;font-size:.78rem;" onclick="event.preventDefault(); window.location.href='produto.html?id=${p.id}'">Adicionar</button>
+    </a>
+  `).join('') || `<p class="empty-state">Sem bebidas disponíveis.</p>`;
+}
+carregar();
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){ entry.target.classList.add('in-view'); revealObserver.unobserve(entry.target); }
+  });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+</script>
+</body>
+</html>
